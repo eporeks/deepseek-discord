@@ -1,68 +1,81 @@
 # Discord Chat Bot
 
-## 🧠 Возможности
+### 🆕 New functions
 
-- 💬 Отвечает на вопросы через команду `!ask`
-- 🎭 Позволяет выбрать стиль ответа командой `!mode`
-- 🤖 Работает с локальной LLM через Ollama (`http://localhost:11434`)
-- 🔧 Поддержка кастомных промптов под каждый стиль
 
----
 
-## 🚀 Установка
+## 🧠 Features
 
-### 1. Установи Python 3.10 или новее
-
-Скачать можно с официального сайта: https://www.python.org/downloads/
-
-Убедись, что при установке ты выбрал `Add Python to PATH`.
+* 💬 Answers questions using the `!ask` command
+* 🎭 Allows switching response styles with the `!mode` command
+* 🤖 Works with a local LLM via Ollama (`http://localhost:11434`)
+* 🔧 Supports custom prompts for each style
 
 ---
 
-### 2. Клонируй или скачай репозиторий
+## 🚀 Installation
+
+### 1. Install Python 3.10 or newer
+
+You can download it from the official website: [https://www.python.org/downloads/](https://www.python.org/downloads/)
+
+Make sure to select `Add Python to PATH` during installation.
+
+---
+
+### 2. Clone or download the repository
 
 ```bash
 git clone https://github.com/yourusername/discord-ollama-bot.git
 cd discord-ollama-bot
 ```
+
 ---
 
-### 3.
-Установи библиотеки:
+### 3. Install dependencies:
 
 ```bash
 pip install discord.py requests
 ```
 
-### 4. Установи Ollama и модель
-Скачай и установи Ollama: https://ollama.com
+---
 
-Запусти Ollama
+### 4. Install Ollama and a model
 
-Загрузите нужную модель (например, deepseek-r1:8b):
+Download and install Ollama: [https://ollama.com](https://ollama.com)
+
+Start Ollama.
+
+Download the required model (e.g., deepseek-r1:8b):
 
 ```bash
 ollama pull deepseek-r1:8b
 ```
 
-### 5. Закинь свой токен
+---
+
+### 5. Add your bot token
 
 ```bash
-bot.run("ТВОЙ_ТОКЕН_ЗДЕСЬ")
+bot.run("YOUR_TOKEN_HERE")
 ```
 
-### 6. Запуск бота
+---
+
+### 6. Run the bot
 
 ```bash
 python bot.py
 ```
 
+---
 
+### Possible Errors
 
-### Возможные ошбки
+* **"Cannot send an empty message"** — You’re trying to send an empty string. Make sure all THINK\_TEXTS\[...] lines are not empty.
 
-"Cannot send an empty message" — ты пытаешься отправить пустой текст. Убедись, что все строки типа THINK_TEXTS[...] не пустые.
+* **"Error connecting to Ollama"** — Make sure Ollama is running and the model is loaded.
 
-"Ошибка при подключении к Ollama" — проверь, что Ollama запущен, и модель загружена.
+* **"400 Bad Request"** — Usually due to a prompt being too long. Try to keep it under 4000 characters.
 
-"400 Bad Request" — обычно из-за слишком длинного запроса. Старайся держать промпт до 4000 символов.
+---
