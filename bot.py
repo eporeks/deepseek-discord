@@ -86,12 +86,12 @@ async def on_ready():
 
 @bot.command()
 async def mode(ctx):
-    embed = discord.Embed(title="Choose a response style", description=(
+    embed = discord.Embed(title="Choose your style", description=(
         "🎩 — Smart\n"
         "🐰 — Cute\n"
         "💀 — Rude\n"
-        "📄 — Normal (default)\n\n"
-        "React below to choose a style."
+        "📄 — Normal stule (default)\n\n"
+        "Click on the reaction below to choose a style."
     ), color=0x660d9e)
     msg = await ctx.send(embed=embed)
 
@@ -117,11 +117,18 @@ async def mode(ctx):
     chosen_style = reactions[reaction.emoji]
     user_styles[ctx.author.id] = chosen_style
 
-    # Update status message
-    await bot.change_presence(activity=discord.Game(f"Selected style: {chosen_style}"))
+    # Status indicating the selected style
+    style_status = {
+        "smart": "Selected style: smart",
+        "cute": "Selected style: cute",
+        "rude": "Selected style: rude",
+        "normal": "Selected style: normal"
+    }
+    await bot.change_presence(activity=discord.Game(style_status.get(chosen_style, "Selected style")))
 
     await msg.delete()
-    await ctx.send(f"✅ You selected style: **{chosen_style}**", delete_after=4)
+    await ctx.send(f"✅ You choose style: **{chosen_style}**", delete_after=4)
+
 
 @bot.command()
 async def ask(ctx, *, prompt):
