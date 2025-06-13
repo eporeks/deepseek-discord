@@ -2,7 +2,8 @@
 
 ### 🆕 New functions
 
-
+1. Add buttons to regenerate the answer and delete the message.
+2. Change the bot's status depending on the selected style.
 
 ## 🧠 Features
 
