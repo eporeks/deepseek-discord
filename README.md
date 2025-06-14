@@ -27,8 +27,8 @@ Make sure to select `Add Python to PATH` during installation.
 ### 2. Clone or download the repository
 
 ```bash
-git clone https://github.com/yourusername/discord-ollama-bot.git
-cd discord-ollama-bot
+git clone https://github.com/eporeks/deepseek-discord.git
+cd deepseek-discord
 ```
 
 ---
