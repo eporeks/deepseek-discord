@@ -8,9 +8,9 @@ import asyncio
 # Response styles
 STYLES = {
     "normal": "",
-    "rude": "Respond rudely and directly, using slang and informal language. Keep it short and simple, like a street guy. Add some swearing for fun and sound annoyed as if you're tired of being asked to explain.",
-    "cute": "Respond sweetly, like a kind and cute anime girl. Use lots of emojis, affectionate words, and a friendly tone. Speak gently, lightly, and playfully.",
-    "smart": "Respond very politely and intelligently. Use proper language, clear and complex but understandable expressions. Maintain a respectful and cultured tone."
+    "gopnik": "Respond rudely and bluntly, using slang and colloquial expressions. Speak simply and briefly, like a regular street guy, with no polite formalities. Swearing makes it more fun, and explain as if you're annoyed by having to explain again.",
+    "cutie": "Respond sweetly, like a kind and cute anime girl. Use lots of emojis, affectionate words, and a friendly tone. Speak softly, gently, and a bit playfully.",
+    "intellectual": "Respond very politely and intellectually, using proper language, complex but clear formulations. Maintain a respectful tone and a cultured communication style."
 }
 
 # Ollama settings
@@ -21,32 +21,44 @@ MODEL_NAME = 'deepseek-r1:8b'
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix='/', intents=intents)
 
 MAX_DISCORD_MESSAGE_LEN = 2000
 user_styles = {}
 
+# Split message if too long
 def split_message(text, max_length=MAX_DISCORD_MESSAGE_LEN):
     return [text[i:i + max_length] for i in range(0, len(text), max_length)]
 
+# View for response buttons
 class ResponseView(discord.ui.View):
-    def __init__(self, user_msg, bot_msgs, prompt):
+    def __init__(self, user_msg, bot_msg, prompt):
         super().__init__(timeout=300)
         self.user_msg = user_msg
-        self.bot_msgs = bot_msgs
+        self.bot_msgs = bot_msg if isinstance(bot_msg, list) else [bot_msg]
         self.prompt = prompt
 
     @discord.ui.button(label="Delete", style=discord.ButtonStyle.danger)
     async def delete(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            await self.user_msg.delete()
+            if self.user_msg:
+                try:
+                    await self.user_msg.delete()
+                except discord.NotFound:
+                    pass
             for msg in self.bot_msgs:
-                await msg.delete()
-            await interaction.message.delete()
+                try:
+                    await msg.delete()
+                except discord.NotFound:
+                    pass
+            try:
+                await interaction.message.delete()
+            except discord.NotFound:
+                pass
         except Exception as e:
-            await interaction.response.send_message(f"Error deleting messages: {e}", ephemeral=True)
+            await interaction.response.send_message(f"⚠️ Could not delete message:\n```{e}```", ephemeral=True)
 
-    @discord.ui.button(label="Regenerate", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="Repeat", style=discord.ButtonStyle.secondary)
     async def repeat(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         style = user_styles.get(interaction.user.id, "normal")
@@ -63,41 +75,46 @@ class ResponseView(discord.ui.View):
             response = requests.post(OLLAMA_URL, json=payload, timeout=60)
             if response.ok:
                 data = response.json()
-                raw_answer = data.get("response", "⚠️ No response from the model.")
+                raw_answer = data.get("response", "⚠️ Model did not return a response.")
                 cleaned_answer = re.sub(r"<think>.*?</think>", "", raw_answer, flags=re.DOTALL).strip()
                 chunks = split_message(cleaned_answer)
 
-                sent_msgs = []
-                for chunk in chunks:
-                    m = await interaction.channel.send(chunk)
-                    sent_msgs.append(m)
+                await self.bot_msg.edit(content=chunks[0], view=self)
 
-                new_view = ResponseView(user_msg=self.user_msg, bot_msgs=sent_msgs, prompt=self.prompt)
-                await interaction.followup.send(view=new_view)
+                for chunk in chunks[1:]:
+                    await self.bot_msg.channel.send(chunk)
+
             else:
-                await interaction.followup.send(f"❌ Error from Ollama: {response.status_code}")
+                await interaction.followup.send(f"❌ Error from Ollama: {response.status_code}", ephemeral=True)
         except Exception as e:
-            await interaction.followup.send(f"❌ Error connecting to Ollama:\n```{e}```")
+            await interaction.followup.send(f"❌ Connection error with Ollama:\n```{e}```", ephemeral=True)
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(status=discord.Status.online, activity=discord.Game("Waiting for commands..."))
+    await bot.change_presence(status=discord.Status.online, activity=discord.Game("DeepSeek -> /mode"))
+    await bot.tree.sync()
     print(f'Bot is running as {bot.user}')
 
-@bot.command()
-async def mode(ctx):
-    embed = discord.Embed(title="Choose your style", description=(
-        "🎩 — Smart\n"
-        "🐰 — Cute\n"
-        "💀 — Rude\n"
-        "📄 — Normal stule (default)\n\n"
-        "Click on the reaction below to choose a style."
-    ), color=0x660d9e)
-    msg = await ctx.send(embed=embed)
+@bot.tree.command(name="mode", description="Choose a response style")
+async def mode_slash(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True, thinking=False)
+
+    embed = discord.Embed(
+        title="Choose a response style",
+        description=(
+            "🎩 — Intellectual\n"
+            "🐰 — Cutie\n"
+            "💀 — Rude\n"
+            "📄 — Normal style (default)\n\n"
+            "Click a reaction below to choose your style."
+        ),
+        color=0x660d9e
+    )
+    msg = await interaction.channel.send(embed=embed)
 
     reactions = {
-        "🎩": "smart",
-        "🐰": "cute",
+        "🎩": "intellectual",
+        "🐰": "cutie",
         "💀": "rude",
         "📄": "normal"
     }
@@ -106,43 +123,42 @@ async def mode(ctx):
         await msg.add_reaction(emoji)
 
     def check(reaction, user):
-        return user == ctx.author and reaction.message.id == msg.id and reaction.emoji in reactions
+        return (
+            user == interaction.user and
+            reaction.message.id == msg.id and
+            reaction.emoji in reactions
+        )
 
     try:
-        reaction, user = await bot.wait_for("reaction_add", timeout=60.0, check=check)
+        reaction, _ = await bot.wait_for("reaction_add", timeout=60.0, check=check)
     except asyncio.TimeoutError:
-        await msg.edit(content="⌛ Time to choose a style has expired.", embed=None)
+        timeout_msg = await interaction.channel.send("⌛ Time to choose a style has expired.")
+        await asyncio.sleep(5)
+        await msg.delete()
+        await timeout_msg.delete()
         return
 
     chosen_style = reactions[reaction.emoji]
-    user_styles[ctx.author.id] = chosen_style
+    user_styles[interaction.user.id] = chosen_style
 
-    # Status indicating the selected style
-    style_status = {
-        "smart": "Selected style: smart",
-        "cute": "Selected style: cute",
-        "rude": "Selected style: rude",
-        "normal": "Selected style: normal"
-    }
-    await bot.change_presence(activity=discord.Game(style_status.get(chosen_style, "Selected style")))
+    await bot.change_presence(activity=discord.Game({
+        "intellectual": "📚 Intellectual",
+        "cutie": "🌸 Anime girl",
+        "rude": "STFU 🚬",
+        "normal": "💬 Deepseek"
+    }.get(chosen_style, "Ready!")))
 
     await msg.delete()
-    await ctx.send(f"✅ You choose style: **{chosen_style}**", delete_after=4)
+    await interaction.followup.send(f"✅ You chose the style: **{chosen_style}**", ephemeral=True)
 
+@bot.tree.command(name="ask", description="Ask the AI a question")
+@app_commands.describe(prompt="Your question for the bot")
+async def ask_slash(interaction: discord.Interaction, prompt: str):
+    thinking = await interaction.response.send_message("🤔 Thinking...", ephemeral=False)
+    thinking_msg = await interaction.original_response()
 
-@bot.command()
-async def ask(ctx, *, prompt):
-    style = user_styles.get(ctx.author.id, "normal")
+    style = user_styles.get(interaction.user.id, "normal")
     style_prompt = STYLES.get(style, "")
-    think_status = {
-        "smart": "🎩 Thinking...",
-        "cute": "☺️ Thinking about your question...",
-        "rude": "Hold on, I'll say something...",
-        "normal": "🧠 Thinking..."
-    }
-
-    thinking_msg = await ctx.send(think_status.get(style, "🧠 Thinking..."))
-
     full_prompt = f"{style_prompt}\n\nQuestion: {prompt}" if style_prompt else prompt
 
     payload = {
@@ -155,23 +171,18 @@ async def ask(ctx, *, prompt):
         response = requests.post(OLLAMA_URL, json=payload, timeout=60)
         if response.ok:
             data = response.json()
-            raw_answer = data.get("response", "⚠️ No response from the model.")
+            raw_answer = data.get("response", "⚠️ Model did not return a response.")
             cleaned_answer = re.sub(r"<think>.*?</think>", "", raw_answer, flags=re.DOTALL).strip()
+            chunks = split_message(cleaned_answer)
+
+            msg = await interaction.channel.send(chunks[0])
+            view = ResponseView(user_msg=thinking_msg, bot_msg=msg, prompt=prompt)
+            await msg.edit(view=view)
 
             await thinking_msg.delete()
-
-            chunks = split_message(cleaned_answer)
-            sent_msgs = []
-            for chunk in chunks:
-                m = await ctx.send(chunk)
-                sent_msgs.append(m)
-
-            view = ResponseView(user_msg=ctx.message, bot_msgs=sent_msgs, prompt=prompt)
-            await ctx.send(view=view)
         else:
-            await thinking_msg.edit(content=f"❌ Error from Ollama: {response.status_code}")
+            await interaction.followup.send(f"❌ Error from Ollama: {response.status_code}", ephemeral=True)
     except Exception as e:
-        await thinking_msg.edit(content=f"❌ Error connecting to Ollama:\n```{e}```")
+        await interaction.followup.send(f"❌ Connection error with Ollama:\n```{e}```", ephemeral=True)
 
-# Replace your token here
-bot.run("YOUR_DISCORD_BOT_TOKEN_HERE")
+bot.run("YOUR_BOT_TOKEN_HERE")
