@@ -2,15 +2,18 @@
 
 ### 🆕 New functions
 
-1. Add buttons to regenerate the answer and delete the message.
-2. Change the bot's status depending on the selected style.
+1. 📝 Rewrote common command using `tree.command`
+2. 🔧 Fixed `/mode` to delete the message after timeout
 
 ## 🧠 Features
 
-* 💬 Answers questions using the `!ask` command
-* 🎭 Allows switching response styles with the `!mode` command
+* 💬 Answers questions using the `/ask` command
+* 🎭 Allows switching response styles with the `/mode` command
+* 🕹 Buttons to delete or regenerate messages
+* 💫 Dynamic status update based on selected style  
 * 🤖 Works with a local LLM via Ollama (`http://localhost:11434`)
 * 🔧 Supports custom prompts for each style
+  
 
 ---
 
@@ -70,6 +73,13 @@ python bot.py
 ```
 
 ---
+
+### 7. Thats all
+
+Feel free to tweak the bot however you like — you're welcome to change statuses, prompts for different personas, or even add new commands.
+This project was made just for fun.
+
+If you'd like to reach out, my Discord is *eporeks*
 
 ### Possible Errors
 
